@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 USE Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use App\Models\Payment;
-// use App\Models\Member;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
