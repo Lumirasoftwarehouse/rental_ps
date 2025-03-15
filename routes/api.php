@@ -80,11 +80,11 @@ Route::group([
 Route::group([
     'prefix' => 'payments'
 ], function () {
-    Route::group([
-        'middleware' => 'auth:api'
-    ], function () {
+    // Route::group([
+    //     'middleware' => 'auth:api'
+    // ], function () {
         // Route::post('/invoice', [PaymentController::class, 'create']);
         Route::post('/webhooks', [PaymentController::class, 'webHook']);
         Route::get('/status', [AuthController::class, 'checkLangganan']);
-    });
+    // });
 });
