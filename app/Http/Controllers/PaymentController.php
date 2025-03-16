@@ -74,7 +74,7 @@ class PaymentController extends Controller
         
         $response = json_decode($response->body());
 
-        Log::info($response);
+        // Log::info($response);
 
         // cek db
         $payment = Payment::where('order_id', $request->order_id)->first();
