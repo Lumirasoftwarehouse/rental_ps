@@ -39,34 +39,36 @@ class PemesananService
                 ];
             }
     
-            // Cek apakah pemesanan dilakukan pada weekend
-            $tanggalSewa = \Carbon\Carbon::parse($dataRequest['tanggal_sewa']);
-            $isWeekend = $tanggalSewa->isWeekend();
+            $tanggalMulai = \Carbon\Carbon::parse($dataRequest['tanggal_sewa']);
+            $durasi = $dataRequest['durasi'];
     
-            // Tambahkan biaya tambahan jika weekend
-            $extraCharge = $isWeekend ? 50000 : 0;
+            $totalHarga = 0;
+            $detailItems = [];
+    
+            // Loop untuk menghitung harga per hari
+            for ($i = 0; $i < $durasi; $i++) {
+                $tanggalSewa = $tanggalMulai->copy()->addDays($i);
+                $isWeekend = $tanggalSewa->isWeekend();
+    
+                $hargaHarian = $isWeekend ? ($hargaPerDurasi + 50000) : $hargaPerDurasi;
+                $totalHarga += $hargaHarian;
+    
+                $detailItems[] = [
+                    'price' => $hargaHarian,
+                    'quantity' => 1,
+                    'name' => $isWeekend ? 'Harga Weekend' : 'Harga Normal',
+                    'date' => $tanggalSewa->format('Y-m-d')
+                ];
+            }
     
             $orderId = Str::uuid();
-    
-            $totalAmount = ($hargaPerDurasi * $dataRequest['durasi']) + $extraCharge;
     
             $params = [
                 'transaction_details' => [
                     'order_id' => $orderId,
-                    'gross_amount' => $totalAmount,
+                    'gross_amount' => $totalHarga,
                 ],
-                'item_details' => [
-                    [
-                        'price' => $hargaPerDurasi,
-                        'quantity' => $dataRequest['durasi'],
-                        'name' => $dataMenu->jenis
-                    ],
-                    [
-                        'price' => $extraCharge,
-                        'quantity' => 1,
-                        'name' => 'Weekend Charge'
-                    ]
-                ],
+                'item_details' => $detailItems,
                 'customer_details' => [
                     'first_name' => auth()->user()->name,
                     'email' => auth()->user()->email
@@ -81,7 +83,7 @@ class PemesananService
                 'status' => 'pending',
                 'customer_first_name' => auth()->user()->name,
                 'customer_email' => auth()->user()->email,
-                'price' => $totalAmount,
+                'price' => $totalHarga,
                 'item_name' => $dataMenu->jenis,
                 'checkout_link' => $response->redirect_url ?? null,
                 'pemesanan_id' => null
@@ -97,6 +99,7 @@ class PemesananService
             ];
         }
     }
+    
     
 
     private function sendToMidtrans($params)
