@@ -28,7 +28,7 @@ class PemesananService
         try {
             $dataRequest['user_id'] = auth()->user()->id;
             $dataMenu = $this->globalMenuRepository->cekMenu($dataRequest['menu_id']);
-        
+    
             $hargaPerDurasi = $dataMenu->jenis === 'PS 5' ? 40000 : ($dataMenu->jenis === 'PS 4' ? 30000 : null);
     
             if (!$hargaPerDurasi) {
@@ -39,18 +39,32 @@ class PemesananService
                 ];
             }
     
+            // Cek apakah pemesanan dilakukan pada weekend
+            $tanggalSewa = \Carbon\Carbon::parse($dataRequest['tanggal_sewa']);
+            $isWeekend = $tanggalSewa->isWeekend();
+    
+            // Tambahkan biaya tambahan jika weekend
+            $extraCharge = $isWeekend ? 50000 : 0;
+    
             $orderId = Str::uuid();
+    
+            $totalAmount = ($hargaPerDurasi * $dataRequest['durasi']) + $extraCharge;
     
             $params = [
                 'transaction_details' => [
                     'order_id' => $orderId,
-                    'gross_amount' => $hargaPerDurasi * $dataRequest['durasi'],
+                    'gross_amount' => $totalAmount,
                 ],
                 'item_details' => [
                     [
                         'price' => $hargaPerDurasi,
                         'quantity' => $dataRequest['durasi'],
                         'name' => $dataMenu->jenis
+                    ],
+                    [
+                        'price' => $extraCharge,
+                        'quantity' => 1,
+                        'name' => 'Weekend Charge'
                     ]
                 ],
                 'customer_details' => [
@@ -67,14 +81,14 @@ class PemesananService
                 'status' => 'pending',
                 'customer_first_name' => auth()->user()->name,
                 'customer_email' => auth()->user()->email,
-                'price' => $params['transaction_details']['gross_amount'],
+                'price' => $totalAmount,
                 'item_name' => $dataMenu->jenis,
                 'checkout_link' => $response->redirect_url ?? null,
                 'pemesanan_id' => null
             ];
     
             return $this->globalPemesananRepository->createPemesanan($dataRequest, $dataPayment, $response);
-       
+    
         } catch (\Throwable $th) {
             return [
                 'id' => '0',
@@ -83,6 +97,7 @@ class PemesananService
             ];
         }
     }
+    
 
     private function sendToMidtrans($params)
     {
